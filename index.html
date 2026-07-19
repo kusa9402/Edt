@@ -1,0 +1,2796 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>발췌 이미지 생성기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --ui-bg: #1a1a1f;
+    --ui-surface: #24242c;
+    --ui-border: #35354a;
+    --ui-text: #c8c8d8;
+    --ui-muted: #7070a0;
+    --ui-accent: #8080c0;
+    --ui-hover: #2e2e3a;
+    --ui-input: #1e1e28;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--ui-bg);
+    color: var(--ui-text);
+    min-height: 100vh;
+    display: flex;
+    gap: 0;
+  }
+
+  /* ─── 사이드바 ─── */
+  #sidebar {
+    width: 340px;
+    min-width: 300px;
+    max-width: 380px;
+    background: var(--ui-surface);
+    border-right: 1px solid var(--ui-border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid var(--ui-border);
+    position: sticky;
+    top: 0;
+    background: var(--ui-surface);
+    z-index: 10;
+  }
+
+  .sidebar-header h1 {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: #d0d0e8;
+  }
+
+  .sidebar-header p {
+    font-size: 11px;
+    color: var(--ui-muted);
+    margin-top: 4px;
+    letter-spacing: 0.04em;
+  }
+
+  .section {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--ui-border);
+  }
+
+  .section-title {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    color: var(--ui-muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    color: #9090b8;
+    margin-bottom: 5px;
+    letter-spacing: 0.05em;
+  }
+
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="color"],
+  select,
+  textarea {
+    width: 100%;
+    background: var(--ui-input);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius-sm);
+    color: var(--ui-text);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--ui-accent);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.6;
+  }
+
+  select { cursor: pointer; }
+
+  /* row 2-col */
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .row3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    background: var(--ui-border);
+    border-radius: 2px;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 13px;
+    height: 13px;
+    background: var(--ui-accent);
+    border-radius: 50%;
+  }
+
+  .slider-val {
+    width: 36px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--ui-muted);
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+
+  /* toggle switch */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .toggle {
+    position: relative;
+    width: 34px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--ui-border);
+    border-radius: 18px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    left: 3px;
+    top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+
+  .toggle input:checked + .toggle-slider { background: var(--ui-accent); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+  /* color picker row */
+  .color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  input[type="color"] {
+    width: 36px;
+    height: 30px;
+    padding: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .color-hex {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+
+  /* preset chips */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chip {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid var(--ui-border);
+    background: var(--ui-input);
+    color: var(--ui-text);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .chip:hover, .chip.active {
+    background: var(--ui-accent);
+    border-color: var(--ui-accent);
+    color: #fff;
+  }
+
+  /* quote style chips */
+  .quote-styles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .qchip {
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid var(--ui-border);
+    background: var(--ui-input);
+    color: var(--ui-text);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .qchip:hover, .qchip.active {
+    border-color: var(--ui-accent);
+    background: rgba(128,128,192,0.12);
+    color: #c8c8ff;
+  }
+
+  .qchip .preview { font-size: 14px; opacity: 0.7; }
+
+  /* file input */
+  .file-btn {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    background: var(--ui-input);
+    border: 1px dashed var(--ui-border);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-size: 11px;
+    color: var(--ui-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .file-btn:hover {
+    border-color: var(--ui-accent);
+    color: var(--ui-accent);
+  }
+
+  input[type="file"] { display: none; }
+
+  /* download button */
+  .btn-download {
+    margin: 16px 20px 20px;
+    padding: 12px;
+    background: var(--ui-accent);
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    width: calc(100% - 40px);
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .btn-download:hover { opacity: 0.88; }
+  .btn-download:active { transform: scale(0.98); }
+
+  /* ─── 캔버스 영역 ─── */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 32px 24px;
+    overflow: auto;
+    background: #12121a;
+  }
+
+  #canvas-wrap {
+    position: relative;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.6);
+    user-select: none;
+  }
+
+  canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  #drag-overlay {
+    position: absolute;
+    inset: 0;
+    cursor: crosshair;
+    display: none;
+  }
+
+  #drag-overlay.active { display: block; }
+
+  #drag-sel {
+    position: absolute;
+    border: 2px dashed rgba(160,160,255,0.9);
+    background: rgba(128,128,220,0.12);
+    box-shadow: 0 0 0 1px rgba(128,128,220,0.3);
+    pointer-events: none;
+    display: none;
+    border-radius: 3px;
+  }
+
+  #drag-sel.visible { display: block; }
+
+  .drag-mode-hint {
+    margin-top: 10px;
+    font-size: 10px;
+    color: var(--ui-muted);
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+
+  .preview-label {
+    margin-bottom: 16px;
+    font-size: 11px;
+    color: var(--ui-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* mobile toggle sidebar */
+  #sidebar-toggle {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+    background: var(--ui-accent);
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  /* ─── 반응형 ─── */
+  @media (max-width: 700px) {
+    body { flex-direction: column; }
+
+    #sidebar {
+      width: 100%;
+      max-width: 100%;
+      min-width: unset;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 50;
+      transform: translateX(-100%);
+      transition: transform 0.25s;
+    }
+
+    #sidebar.open { transform: translateX(0); }
+
+    #main { padding: 16px 12px; min-height: 100vh; }
+
+    #sidebar-toggle { display: flex; align-items: center; justify-content: center; }
+  }
+
+  /* ─── 캐릭터 카드 ─── */
+  .char-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .char-card {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--ui-input);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px; cursor: pointer;
+    transition: border-color 0.15s; position: relative;
+  }
+  .char-card:hover { border-color: var(--ui-accent); }
+  .char-card.active { border-color: var(--ui-accent); background: rgba(128,128,192,0.08); }
+
+  .char-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    flex-shrink: 0; border: 1.5px solid rgba(255,255,255,0.15);
+  }
+  .char-info { flex: 1; min-width: 0; }
+  .char-name { font-size: 12px; color: var(--ui-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .char-meta { font-size: 10px; color: var(--ui-muted); margin-top: 1px; }
+  .char-del { background: none; border: none; color: var(--ui-muted); font-size: 14px; cursor: pointer; padding: 2px 4px; line-height: 1; border-radius: 3px; flex-shrink: 0; }
+  .char-del:hover { color: #e07070; }
+  .char-empty { font-size: 11px; color: var(--ui-muted); text-align: center; padding: 10px 0; }
+
+  /* ─── 프리셋 저장 ─── */
+  .saved-presets { display: flex; flex-direction: column; gap: 6px; }
+  .preset-item { display: flex; align-items: center; gap: 6px; background: var(--ui-input); border: 1px solid var(--ui-border); border-radius: var(--radius-sm); padding: 7px 10px; cursor: pointer; transition: border-color 0.15s; }
+  .preset-item:hover { border-color: var(--ui-accent); }
+  .preset-swatch { width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
+  .preset-info { flex: 1; min-width: 0; }
+  .preset-name { font-size: 11px; color: var(--ui-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .preset-meta { font-size: 10px; color: var(--ui-muted); margin-top: 1px; }
+  .preset-del { background: none; border: none; color: var(--ui-muted); font-size: 14px; cursor: pointer; padding: 2px 4px; line-height: 1; border-radius: 3px; flex-shrink: 0; }
+  .preset-del:hover { color: #e07070; }
+  .preset-empty { font-size: 11px; color: var(--ui-muted); text-align: center; padding: 12px 0; }
+
+  /* mini button */
+  .mini-btn {
+    padding: 4px 10px;
+    background: var(--ui-input);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius-sm);
+    color: var(--ui-muted);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .mini-btn:hover {
+    border-color: var(--ui-accent);
+    color: var(--ui-accent);
+  }
+
+  /* bg thumbnail grid */
+  .bg-thumbs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .bg-thumb {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bg-thumb.active { border-color: var(--ui-accent); }
+
+  .bg-thumb span {
+    position: absolute;
+    bottom: 2px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 9px;
+    color: rgba(255,255,255,0.7);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+  }
+</style>
+</head>
+<body>
+
+<!-- 사이드바 -->
+<div id="sidebar">
+  <div class="sidebar-header">
+    <h1>✦ 발췌 이미지 생성기</h1>
+    <p>감성적인 인용구 이미지를 만들어보세요</p>
+  </div>
+
+  <!-- 1. 폰트 설정 -->
+  <div class="section">
+    <div class="section-title">폰트 설정</div>
+
+    <div class="field">
+      <label>폰트 종류</label>
+      <select id="fontFamily">
+        <option value="Noto Sans KR">프리텐다드 (고딕)</option>
+        <option value="Noto Serif KR">리디바탕 (명조)</option>
+        <option value="Georgia">Georgia (영문 Serif)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>폰트 색상</label>
+      <div class="color-row">
+        <input type="color" id="fontColor" value="#e8e8f0">
+        <input type="text" id="fontColorHex" class="color-hex" value="#E8E8F0" maxlength="7" placeholder="#FFFFFF">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>크기: <span id="fontSizeVal">18</span>px</label>
+      <div class="slider-row">
+        <input type="range" id="fontSize" min="10" max="48" value="18">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>자간: <span id="letterSpacingVal">0</span>px</label>
+        <input type="range" id="letterSpacing" min="-3" max="10" value="0" step="0.5">
+      </div>
+      <div class="field">
+        <label>행간: <span id="lineHeightVal">1.8</span></label>
+        <input type="range" id="lineHeight" min="1.0" max="3.5" value="1.8" step="0.1">
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="toggle-row">
+        <label style="margin:0">들여쓰기</label>
+        <label class="toggle">
+          <input type="checkbox" id="indent">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 인용문구 스타일 -->
+  <div class="section">
+    <div class="section-title">인용문구</div>
+
+    <!-- 캐릭터 -->
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <label style="margin:0;">캐릭터</label>
+        <button class="mini-btn" onclick="toggleCharAdd()" id="charAddToggleBtn">＋ 추가</button>
+      </div>
+
+      <!-- 캐릭터 목록 -->
+      <div class="char-list" id="charList">
+        <div class="char-empty" id="charEmpty">등록된 캐릭터가 없습니다</div>
+      </div>
+
+      <!-- 새 캐릭터 추가 폼 (접혀있다가 열림) -->
+      <div id="charAddForm" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--ui-border);">
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <input type="text" id="charNameInput" placeholder="캐릭터 이름" style="flex:1;">
+        </div>
+        <div class="row2" style="margin-bottom:6px;">
+          <div class="field" style="margin-bottom:0;">
+            <label style="margin-bottom:3px;">폰트 색상</label>
+            <div class="color-row">
+              <input type="color" id="charFontColorInput" value="#e8e8f0">
+              <input type="text" id="charFontColorHex" class="color-hex" value="#E8E8F0" maxlength="7">
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="margin-bottom:3px;">인용구 색상</label>
+            <div class="color-row">
+              <input type="color" id="charAccentColorInput" value="#8080c0">
+              <input type="text" id="charAccentColorHex" class="color-hex" value="#8080C0" maxlength="7">
+            </div>
+          </div>
+        </div>
+        <div style="margin-bottom:6px;">
+          <label style="margin-bottom:4px;">인용 스타일</label>
+          <div class="chips" id="charStyleChips">
+            <div class="chip active" data-style="openquote" onclick="selectCharStyle(this,'openquote')">" 큰따옴표</div>
+            <div class="chip" data-style="sidebar" onclick="selectCharStyle(this,'sidebar')">│ 사이드바</div>
+            <div class="chip" data-style="bubble-left" onclick="selectCharStyle(this,'bubble-left')">💬 말풍선</div>
+          </div>
+        </div>
+        <button class="mini-btn" onclick="addCharacter()" style="width:100%;padding:7px;">＋ 캐릭터 등록</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>본문</label>
+      <textarea id="quoteText" placeholder="인용구를 입력하세요...&#10;&#10;여러 줄도 입력할 수 있어요."></textarea>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+        <button class="mini-btn" onclick="applySelectionAsQuote()" title="드래그한 텍스트를 인용구 색상으로 적용 (여러 번 눌러 여러 구간 지정 가능)">✂ 드래그 색상</button>
+        <button class="mini-btn" onclick="applyHighlight()" title="드래그한 텍스트에 형광펜 효과 (여러 번 눌러 여러 구간 지정 가능)">🖍 형광펜</button>
+        <button class="mini-btn" onclick="removeAsterisks()" title="본문의 * 제거">✕ * 없애기</button>
+        <button class="mini-btn" id="clearCharColorsBtn" onclick="clearCharColorRanges()" title="캐릭터별 색상 초기화" style="display:none;">🎨 캐릭터 색 초기화</button>
+      </div>
+      <div id="selectionColorRow" style="display:none;margin-top:8px;">
+        <label style="margin-bottom:4px;">선택 텍스트 색상</label>
+        <div class="color-row">
+          <input type="color" id="selectionFontColor" value="#ffd700">
+          <input type="text" id="selectionFontColorHex" class="color-hex" value="#FFD700" maxlength="7">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+          <div id="selectionPreview" style="font-size:11px;color:var(--ui-muted);"></div>
+          <button class="mini-btn" onclick="clearSelectionRanges()">✕ 선택 초기화</button>
+        </div>
+      </div>
+      <div id="highlightColorRow" style="display:none;margin-top:8px;">
+        <label style="margin-bottom:4px;">형광펜 색상</label>
+        <div class="color-row">
+          <input type="color" id="highlightColor" value="#ffe066">
+          <input type="text" id="highlightColorHex" class="color-hex" value="#FFE066" maxlength="7">
+        </div>
+        <label style="margin-top:6px;margin-bottom:2px;">형광펜 투명도: <span id="highlightAlphaVal">45</span>%</label>
+        <input type="range" id="highlightAlpha" min="10" max="90" value="45" style="width:100%;margin-top:2px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+          <div id="highlightPreview" style="font-size:11px;color:var(--ui-muted);"></div>
+          <button class="mini-btn" onclick="clearHighlightRanges()">✕ 형광펜 초기화</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 인용 영역 지정 (드래그 선택으로 원하는 부분만 인용 스타일 적용) -->
+    <div id="sidebarLineField" class="field" style="display:none;">
+      <label id="sidebarLineLabel">인용 영역 지정</label>
+      <p style="font-size:11px;color:var(--ui-muted);margin-bottom:6px;" id="sidebarLineHint">textarea에서 원하는 부분을 드래그 후 버튼 클릭 (지정 안 하면 전체 텍스트 사용)</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="mini-btn" id="sidebarLineAddBtn" onclick="addSidebarLine()">+ 선택 영역 지정</button>
+        <button class="mini-btn" onclick="clearSidebarLines()">✕ 전체 초기화</button>
+      </div>
+      <div id="sidebarLinePreview" style="margin-top:6px;font-size:11px;color:var(--ui-muted);"></div>
+    </div>
+
+    <div class="field">
+      <label>인용 스타일</label>
+      <div class="quote-styles">
+        <div class="qchip active" data-style="none" onclick="setQuoteStyle(this,'none')">
+          <span class="preview">—</span> 스타일 없음
+        </div>
+        <div class="qchip" data-style="sidebar" onclick="setQuoteStyle(this,'sidebar')">
+          <span class="preview">│</span> 사이드바
+        </div>
+        <div class="qchip" data-style="openquote" onclick="setQuoteStyle(this,'openquote')">
+          <span class="preview">"</span> 큰따옴표
+        </div>
+        <div class="qchip" data-style="bubble-left" onclick="setQuoteStyle(this,'bubble-left')">
+          <span class="preview">💬</span> 말풍선 (좌)
+        </div>
+        <div class="qchip" data-style="bubble-right" onclick="setQuoteStyle(this,'bubble-right')">
+          <span class="preview">💬</span> 말풍선 (우)
+        </div>
+      </div>
+    </div>
+
+    <div class="field" id="accentColorField">
+      <label id="accentColorLabel">사이드바 바 색상</label>
+      <div class="color-row">
+        <input type="color" id="accentColor" value="#e8e8f0">
+        <input type="text" id="accentColorHex" class="color-hex" value="#E8E8F0" maxlength="7">
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 배경 설정 -->
+  <div class="section">
+    <div class="section-title">배경</div>
+
+    <div class="field">
+      <label>프리셋</label>
+      <div class="bg-thumbs" id="bgPresets"></div>
+    </div>
+
+    <div class="field">
+      <label>이미지 불러오기</label>
+      <label class="file-btn" for="bgImageInput">📁 이미지 파일 선택</label>
+      <input type="file" id="bgImageInput" accept="image/*">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>흐리기: <span id="blurVal">0</span>px</label>
+        <input type="range" id="blur" min="0" max="30" value="0">
+      </div>
+      <div class="field">
+        <label>어둡기: <span id="darkenVal">0</span>%</label>
+        <input type="range" id="darken" min="0" max="90" value="0">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>밝기: <span id="brightenVal">0</span>%</label>
+      <input type="range" id="brighten" min="0" max="80" value="0">
+    </div>
+
+    <div class="field">
+      <label>그라데이션</label>
+      <div class="chips" id="gradChips">
+        <div class="chip active" onclick="setGrad(this,'none')">없음</div>
+        <div class="chip" onclick="setGrad(this,'bottom')">아래로</div>
+        <div class="chip" onclick="setGrad(this,'top')">위로</div>
+        <div class="chip" onclick="setGrad(this,'center')">중앙 집중</div>
+        <div class="chip" onclick="setGrad(this,'vignette')">비네팅</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 출처 -->
+  <div class="section">
+    <div class="section-title">출처</div>
+
+    <div class="row2">
+      <div class="field">
+        <label>캐릭터/인물</label>
+        <input type="text" id="sourceChar" placeholder="캐릭터 이름" value="">
+      </div>
+      <div class="field">
+        <label>제작자/출처</label>
+        <input type="text" id="sourceCreator" placeholder="작품명 / 닉네임" value="">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>구분자</label>
+      <div class="chips">
+        <div class="chip active" onclick="setSep(this,'  |  ')">|</div>
+        <div class="chip" onclick="setSep(this,'  ·  ')">·</div>
+        <div class="chip" onclick="setSep(this,'  /  ')">/</div>
+        <div class="chip" onclick="setSep(this,'  —  ')">—</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>출처 색상</label>
+      <div class="color-row">
+        <input type="color" id="sourceColor" value="#9898b8">
+        <input type="text" id="sourceColorHex" class="color-hex" value="#9898B8" maxlength="7">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>출처 크기: <span id="sourceSizeVal">13</span>px</label>
+      <input type="range" id="sourceSize" min="8" max="28" value="13">
+    </div>
+
+    <div class="field">
+      <label>출처 정렬</label>
+      <div class="chips" id="sourceAlignChips">
+        <div class="chip" onclick="setSourceAlign(this,'left')">좌</div>
+        <div class="chip active" onclick="setSourceAlign(this,'center')">중앙</div>
+        <div class="chip" onclick="setSourceAlign(this,'right')">우</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 사이즈 -->
+  <div class="section">
+    <div class="section-title">캔버스 사이즈</div>
+
+    <div class="field">
+      <div class="chips" id="sizePresets">
+        <div class="chip" onclick="setSize(this,900,1200)">세로형</div>
+        <div class="chip" onclick="setSize(this,1200,900)">가로형</div>
+        <div class="chip active" onclick="setSize(this,900,900)">1:1</div>
+        <div class="chip" onclick="setSize(this,1500,500)">트위터 헤더</div>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>가로 (px)</label>
+        <input type="number" id="canvasW" value="900" min="100" max="3000" step="10">
+      </div>
+      <div class="field">
+        <label>세로 (px)</label>
+        <input type="number" id="canvasH" value="900" min="100" max="3000" step="10">
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 여백 -->
+  <div class="section">
+    <div class="section-title">여백</div>
+
+    <div class="row2">
+      <div class="field">
+        <label>좌우 여백: <span id="padXVal">80</span>px</label>
+        <input type="range" id="padX" min="10" max="300" value="80">
+      </div>
+      <div class="field">
+        <label>상하 여백: <span id="padYVal">80</span>px</label>
+        <input type="range" id="padY" min="10" max="300" value="80">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>텍스트 세로 위치</label>
+      <div class="chips" id="alignChips">
+        <div class="chip" onclick="setVAlign(this,'top')">위</div>
+        <div class="chip active" onclick="setVAlign(this,'center')">중앙</div>
+        <div class="chip" onclick="setVAlign(this,'bottom')">아래</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="toggle-row">
+        <label style="margin:0">드래그로 영역 지정</label>
+        <label class="toggle">
+          <input type="checkbox" id="useDragRegion">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <p id="dragHint" style="font-size:10px;color:var(--ui-muted);margin-top:6px;display:none;">
+        미리보기 캔버스 위에서 드래그해서 텍스트 영역을 지정하세요.<br>
+        지정 후 다시 드래그하면 영역이 변경됩니다.
+      </p>
+      <button id="clearDragBtn" onclick="clearDragRegion()" style="display:none;margin-top:8px;width:100%;padding:6px;background:var(--ui-input);border:1px solid var(--ui-border);border-radius:var(--radius-sm);color:var(--ui-muted);font-family:inherit;font-size:11px;cursor:pointer;">
+        × 영역 초기화
+      </button>
+    </div>
+  </div>
+
+  <!-- 8. 프리셋 저장 -->
+  <div class="section">
+    <div class="section-title">프리셋 저장</div>
+    <div class="field">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" id="presetNameInput" placeholder="프리셋 이름 (선택)" style="flex:1;">
+        <button class="mini-btn" onclick="savePreset()" style="padding:6px 12px;">💾 저장</button>
+      </div>
+      <p style="font-size:10px;color:var(--ui-muted);margin-top:5px;">현재 폰트·색상·스타일·배경·여백을 저장합니다.</p>
+    </div>
+    <div class="field">
+      <label>저장된 프리셋 <span id="presetCount" style="color:var(--ui-muted);">(0/8)</span></label>
+      <div class="saved-presets" id="savedPresetList">
+        <div class="preset-empty">저장된 프리셋이 없습니다</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 다운로드 -->
+  <button class="btn-download" onclick="downloadImage()">↓ PNG 고화질 다운로드</button>
+</div>
+
+<!-- 캔버스 프리뷰 -->
+<div id="main">
+  <div class="preview-label">미리보기</div>
+  <div id="canvas-wrap">
+    <canvas id="c"></canvas>
+    <div id="drag-overlay">
+      <div id="drag-sel"></div>
+    </div>
+  </div>
+  <div class="drag-mode-hint" id="dragModeHint" style="display:none">
+    ✦ 드래그 영역 지정 모드 — 원하는 영역을 드래그하세요
+  </div>
+</div>
+
+<button id="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+
+<script>
+// ─── 상태 ───
+const state = {
+  fontFamily: 'Noto Sans KR',
+  fontSize: 18,
+  fontColor: '#e8e8f0',
+  letterSpacing: 0,
+  lineHeight: 1.8,
+  indent: false,
+
+  quoteStyle: 'none',
+  quoteText: '',
+  bubbleColor: '#e0e0e8',
+  bubbleColorRight: '#3B82F6',  // 우측 말풍선: DM(메시지 앱)처럼 파란색
+  accentColor: '#e8e8f0',  // 사이드바 바 & 큰따옴표 색상
+
+  bgType: 'preset',
+  bgPreset: '#2e3340',
+  bgImage: null,
+  blur: 0,
+  darken: 0,
+  brighten: 0,
+  gradient: 'none',
+
+  sourceChar: '',
+  sourceCreator: '',
+  separator: '  |  ',
+  sourceColor: '#9898b8',
+  sourceSize: 13,
+  sourceAlign: 'center',
+
+  // 드래그 선택 인용 (글자 색상) — 여러 구간 지정 가능
+  selectionRanges: [],
+  selectionColor: '#ffd700',
+
+  // 형광펜 효과 — 여러 구간 지정 가능
+  highlightRanges: [],
+  highlightColor: '#ffe066',
+  highlightAlpha: 0.45,
+
+  // 사이드바 라인 선택 ({ lineIndexes: Set<number> } - wrapText 기준 라인 번호)
+  sidebarLineMode: false,   // true이면 전체 아닌 선택 라인에만 바 표시
+  sidebarLines: [],         // 바를 표시할 라인 인덱스 배열
+
+  canvasW: 900,
+  canvasH: 900,
+  padX: 80,
+  padY: 80,
+  vAlign: 'center',
+
+  // 드래그 영역 (null = 전체 여백 사용)
+  dragRegion: null,  // { x, y, w, h } in canvas coords (0~1 normalized)
+  useDragRegion: false,
+
+  // 활성 캐릭터 인덱스 (-1 = 없음)
+  activeCharIdx: -1,
+
+  // 캐릭터별 색상 범위: [{ start, end, fontColor, accentColor, charName }, ...]
+  charColorRanges: [],
+};
+
+// ─── 배경 프리셋 ───
+const BG_PRESETS = [
+  { label: '그레이', color: '#2e3340' },
+  { label: '딥 네이비', color: '#1c2030' },
+  { label: '블랙', color: '#0f0f13' },
+  { label: '차콜', color: '#2a2a2a' },
+  { label: '베이지', color: '#f2ede6' },
+  { label: '크림', color: '#faf7f2' },
+  { label: '화이트', color: '#ffffff' },
+  { label: '라벤더', color: '#e8e6f2' },
+];
+
+function initBgPresets() {
+  const el = document.getElementById('bgPresets');
+  BG_PRESETS.forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'bg-thumb' + (i === 0 ? ' active' : '');
+    d.style.background = p.color;
+    d.style.border = '2px solid transparent';
+    d.title = p.label;
+    d.innerHTML = `<span>${p.label}</span>`;
+    d.onclick = () => {
+      document.querySelectorAll('.bg-thumb').forEach(x => x.classList.remove('active'));
+      d.classList.add('active');
+      state.bgPreset = p.color;
+      state.bgImage = null;
+      state.bgType = 'preset';
+      render();
+    };
+    el.appendChild(d);
+  });
+}
+
+// ─── 바인딩 유틸 ───
+function bindSlider(id, key, displayId) {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    state[key] = parseFloat(el.value);
+    if (displayId) document.getElementById(displayId).textContent = el.value;
+    render();
+  });
+}
+
+function bindSelect(id, key) {
+  document.getElementById(id).addEventListener('change', e => {
+    state[key] = e.target.value;
+    render();
+  });
+}
+
+function bindText(id, key) {
+  document.getElementById(id).addEventListener('input', e => {
+    state[key] = e.target.value;
+    render();
+  });
+}
+
+function bindNumber(id, key) {
+  document.getElementById(id).addEventListener('input', e => {
+    state[key] = parseInt(e.target.value) || 0;
+    render();
+  });
+}
+
+function bindColor(pickerId, hexId, key) {
+  const picker = document.getElementById(pickerId);
+  const hex = document.getElementById(hexId);
+  picker.addEventListener('input', () => {
+    state[key] = picker.value;
+    hex.value = picker.value.toUpperCase();
+    render();
+  });
+  hex.addEventListener('input', () => {
+    const v = hex.value.trim();
+    if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
+      picker.value = v;
+      state[key] = v;
+      render();
+    }
+  });
+}
+
+// ─── 전역 변수 ───
+let currentSep = '  |  ';
+let currentGrad = 'none';
+let currentVAlign = 'center';
+let _prevQuoteText = '';
+
+function setQuoteStyle(el, style) {
+  document.querySelectorAll('.qchip').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  state.quoteStyle = style;
+  // 인용 영역 지정 UI: '스타일 없음'을 제외한 모든 인용 스타일에서 사용 가능
+  const field = document.getElementById('sidebarLineField');
+  const label = document.getElementById('sidebarLineLabel');
+  const hint = document.getElementById('sidebarLineHint');
+  const addBtn = document.getElementById('sidebarLineAddBtn');
+  if (style === 'none') {
+    field.style.display = 'none';
+  } else {
+    field.style.display = '';
+    if (style === 'sidebar') {
+      label.textContent = '사이드바 줄 선택';
+      hint.textContent = 'textarea에서 원하는 줄을 드래그 후 버튼 클릭 (지정 안 하면 전체 줄에 바 표시)';
+      addBtn.textContent = '+ 줄에 바 추가';
+    } else if (style === 'openquote') {
+      label.textContent = '큰따옴표 위치 지정';
+      hint.textContent = 'textarea에서 따옴표를 넣고 싶은 부분을 드래그 후 버튼 클릭 (지정 안 하면 문단마다 자동 표시)';
+      addBtn.textContent = '+ 이 부분에 따옴표 추가';
+    } else {
+      label.textContent = '말풍선 내용 지정';
+      hint.textContent = 'textarea에서 말풍선에 넣을 부분만 드래그 후 버튼 클릭 (지정 안 하면 전체 텍스트 사용)';
+      addBtn.textContent = '+ 이 부분을 말풍선으로 지정';
+    }
+  }
+  updateAccentVisibility(style);
+  render();
+}
+
+function setGrad(el, g) {
+  document.querySelectorAll('#gradChips .chip').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  state.gradient = g;
+  render();
+}
+
+function setSep(el, s) {
+  document.querySelectorAll('.section .chips .chip').forEach(x => {
+    if (x.onclick && x.onclick.toString().includes('setSep')) x.classList.remove('active');
+  });
+  el.classList.add('active');
+  state.separator = s;
+  render();
+}
+
+function setVAlign(el, v) {
+  document.querySelectorAll('#alignChips .chip').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  state.vAlign = v;
+  render();
+}
+
+function setSourceAlign(el, align) {
+  document.querySelectorAll('#sourceAlignChips .chip').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  state.sourceAlign = align;
+  render();
+}
+
+function applySelectionAsQuote() {
+  const ta = document.getElementById('quoteText');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  if (start === end) {
+    alert('본문에서 텍스트를 드래그하여 선택한 후 버튼을 눌러주세요.');
+    return;
+  }
+  const existing = state.selectionRanges.findIndex(r => r.start === start && r.end === end);
+  if (existing >= 0) state.selectionRanges.splice(existing, 1);
+  else state.selectionRanges.push({ start, end });
+  document.getElementById('selectionColorRow').style.display = state.selectionRanges.length ? '' : 'none';
+  updateSelectionPreview();
+  render();
+}
+
+function applyHighlight() {
+  const ta = document.getElementById('quoteText');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  if (start === end) {
+    alert('본문에서 텍스트를 드래그하여 선택한 후 버튼을 눌러주세요.');
+    return;
+  }
+  const existing = state.highlightRanges.findIndex(r => r.start === start && r.end === end);
+  if (existing >= 0) state.highlightRanges.splice(existing, 1);
+  else state.highlightRanges.push({ start, end });
+  document.getElementById('highlightColorRow').style.display = state.highlightRanges.length ? '' : 'none';
+  updateSelectionPreview();
+  render();
+}
+
+function clearSelectionRanges() {
+  state.selectionRanges = [];
+  document.getElementById('selectionColorRow').style.display = 'none';
+  updateSelectionPreview();
+  render();
+}
+
+function clearHighlightRanges() {
+  state.highlightRanges = [];
+  document.getElementById('highlightColorRow').style.display = 'none';
+  updateSelectionPreview();
+  render();
+}
+
+function updateSelectionPreview() {
+  const selEl = document.getElementById('selectionPreview');
+  if (selEl) {
+    selEl.textContent = state.selectionRanges.length ? `${state.selectionRanges.length}개 구간 선택됨` : '';
+  }
+  const hlEl = document.getElementById('highlightPreview');
+  if (hlEl) {
+    hlEl.textContent = state.highlightRanges.length ? `${state.highlightRanges.length}개 구간 선택됨` : '';
+  }
+}
+
+function addSidebarLine() {
+  const ta = document.getElementById('quoteText');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  if (start === end) {
+    alert('본문에서 원하는 부분을 드래그하여 선택한 후 버튼을 눌러주세요.');
+    return;
+  }
+  // 선택 구간이 원본 텍스트 기준 start~end 이므로 저장
+  // 렌더 시 wrapText로 분리된 라인 중 이 범위에 겹치는 것들에 바 표시
+  state.sidebarLineMode = true;
+  // 중복 방지: 이미 같은 범위면 제거(토글), 아니면 추가
+  const existing = state.sidebarLines.findIndex(r => r.start === start && r.end === end);
+  if (existing >= 0) {
+    state.sidebarLines.splice(existing, 1);
+  } else {
+    state.sidebarLines.push({ start, end });
+  }
+  if (state.sidebarLines.length === 0) state.sidebarLineMode = false;
+  updateSidebarLinePreview();
+  render();
+}
+
+function clearSidebarLines() {
+  state.sidebarLines = [];
+  state.sidebarLineMode = false;
+  updateSidebarLinePreview();
+  render();
+}
+
+function updateSidebarLinePreview() {
+  const el = document.getElementById('sidebarLinePreview');
+  if (!el) return;
+  if (state.sidebarLines.length === 0) {
+    el.textContent = '선택된 줄 없음 (전체에 바 표시)';
+  } else {
+    el.textContent = `${state.sidebarLines.length}개 구간 선택됨`;
+  }
+}
+
+function removeAsterisks() {
+  const ta = document.getElementById('quoteText');
+  ta.value = ta.value.replace(/\*/g, '');
+  state.quoteText = ta.value;
+  state.selectionRanges = [];
+  state.highlightRanges = [];
+  state.sidebarLines = [];
+  state.sidebarLineMode = false;
+  state.charColorRanges = [];
+  document.getElementById('selectionColorRow').style.display = 'none';
+  document.getElementById('highlightColorRow').style.display = 'none';
+  updateSelectionPreview();
+  updateSidebarLinePreview();
+  render();
+}
+
+function clearCharColorRanges() {
+  state.charColorRanges = [];
+  render();
+}
+
+function setSize(el, w, h) {
+  document.querySelectorAll('#sizePresets .chip').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  state.canvasW = w;
+  state.canvasH = h;
+  document.getElementById('canvasW').value = w;
+  document.getElementById('canvasH').value = h;
+  render();
+}
+
+// ─── 텍스트 줄바꿈 ───
+function wrapText(ctx, text, maxWidth, letterSpacing) {
+  const paras = text.split('\n');
+  const lines = [];
+  for (const para of paras) {
+    if (para.trim() === '') { lines.push(''); continue; }
+    const words = para.split('');
+    let line = '';
+    for (const ch of words) {
+      const testLine = line + ch;
+      const w = measureWithSpacing(ctx, testLine, letterSpacing);
+      if (w > maxWidth && line !== '') {
+        lines.push(line);
+        line = ch;
+      } else {
+        line = testLine;
+      }
+    }
+    if (line) lines.push(line);
+  }
+  return lines;
+}
+
+function measureWithSpacing(ctx, text, spacing) {
+  let w = 0;
+  for (let i = 0; i < text.length; i++) {
+    w += ctx.measureText(text[i]).width;
+    if (i < text.length - 1) w += spacing;
+  }
+  return w;
+}
+
+function drawTextWithSpacing(ctx, text, x, y, spacing, indent, isFirst) {
+  let cx = x + (indent && isFirst ? state.fontSize * 1.0 : 0);
+  for (let i = 0; i < text.length; i++) {
+    ctx.fillText(text[i], cx, y);
+    cx += ctx.measureText(text[i]).width + spacing;
+  }
+}
+
+// ─── 말풍선 그리기 ───
+function drawBubble(ctx, text, x, y, maxWidth, fontSize, lineH, letterSpacing, bgColor, textColor, side, fontFamily, indent) {
+  ctx.font = `${fontSize}px "${fontFamily}"`;
+  const lines = wrapText(ctx, text, maxWidth - 40, letterSpacing);
+  const lh = fontSize * lineH;
+  const bh = lines.length * lh + 30;
+  const bw = Math.min(maxWidth, lines.reduce((m, l) => Math.max(m, measureWithSpacing(ctx, l, letterSpacing)), 0) + 50);
+
+  const bx = side === 'right' ? x + maxWidth - bw : x;
+  const by = y;
+
+  // bubble rounded rect (tail is inserted directly into the straight bottom
+  // edge so the whole outline stays a single closed subpath on both sides)
+  const r = 18;
+  const tailSize = 10;
+  ctx.fillStyle = bgColor;
+  ctx.beginPath();
+  ctx.moveTo(bx + r, by);
+  ctx.lineTo(bx + bw - r, by);
+  ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + r);
+  ctx.lineTo(bx + bw, by + bh - r);
+  ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - r, by + bh);
+
+  if (side === 'right') {
+    ctx.lineTo(bx + bw - 20, by + bh);
+    ctx.lineTo(bx + bw - 10, by + bh + tailSize);
+    ctx.lineTo(bx + bw - 30, by + bh);
+  }
+
+  if (side === 'left') {
+    ctx.lineTo(bx + 30, by + bh);
+    ctx.lineTo(bx + 10, by + bh + tailSize);
+    ctx.lineTo(bx + 20, by + bh);
+  }
+
+  ctx.lineTo(bx + r, by + bh);
+  ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - r);
+  ctx.lineTo(bx, by + r);
+  ctx.quadraticCurveTo(bx, by, bx + r, by);
+  ctx.closePath();
+  ctx.fill();
+
+  // text
+  ctx.fillStyle = textColor;
+  ctx.font = `${fontSize}px "${fontFamily}"`;
+  for (let i = 0; i < lines.length; i++) {
+    const ty = by + 20 + fontSize + i * lh;
+    const tx = bx + 20;
+    drawTextWithSpacing(ctx, lines[i], tx, ty, letterSpacing, indent && i === 0, i === 0);
+  }
+
+  return bh + 20 + tailSize;
+}
+
+// ─── 엔터(빈 줄) 기준으로 인용구를 블록 단위로 분리 ───
+// 빈 줄(엔터 두 번)로 구분된 각 블록을 별개의 말풍선/큰따옴표 단위로 취급한다.
+function splitQuoteBlocks(text) {
+  return text
+    .split(/\n\s*\n/)
+    .map(b => b.replace(/^\n+|\n+$/g, ''))
+    .filter(b => b.trim() !== '');
+}
+
+// 블록별로 별도의 말풍선을 세로로 쌓아 그린다 (사이드바의 줄 간격 분리와 동일한 개념)
+function drawBubbleBlocks(ctx, text, x, y, maxWidth, fontSize, lineH, letterSpacing, bgColor, textColor, side, fontFamily, indent) {
+  const blocks = getQuoteBlocks(text);
+  if (blocks.length === 0) return 0;
+  const gap = 14;
+  let cy = y;
+  let total = 0;
+  blocks.forEach((block, idx) => {
+    if (idx > 0) { cy += gap; total += gap; }
+    const h = drawBubble(ctx, block, x, cy, maxWidth, fontSize, lineH, letterSpacing, bgColor, textColor, side, fontFamily, indent && idx === 0);
+    cy += h;
+    total += h;
+  });
+  return total;
+}
+
+// drawBubbleBlocks와 동일한 레이아웃으로 전체 높이만 미리 계산 (수직 정렬용)
+function measureBubbleBlocksHeight(ctx, text, maxWidth, fontSize, lineH, letterSpacing) {
+  const blocks = getQuoteBlocks(text);
+  const lh = fontSize * lineH;
+  const gap = 14;
+  let total = 0;
+  blocks.forEach((block, idx) => {
+    if (idx > 0) total += gap;
+    const lines = wrapText(ctx, block, maxWidth - 40, letterSpacing);
+    total += lines.length * lh + 30 + 20 + 10; // drawBubble의 bh + 20 + tailSize와 동일
+  });
+  return total;
+}
+
+// 지정한 wrapText 결과 배열에서 i번째 줄이 "블록의 첫 줄"인지 판별
+// (빈 줄 바로 다음에 오는 줄 = 새 블록의 시작)
+function isQuoteBlockStart(lines, i) {
+  return lines[i] !== '' && (i === 0 || lines[i - 1] === '');
+}
+
+// ─── 사용자가 드래그로 지정한 영역이 있으면 그것을, 없으면 엔터(빈 줄) 자동 분리를 사용 ───
+function getQuoteBlocks(text) {
+  if (state.sidebarLineMode && state.sidebarLines.length > 0) {
+    return state.sidebarLines
+      .slice()
+      .sort((a, b) => a.start - b.start)
+      .map(r => text.slice(r.start, r.end).trim())
+      .filter(b => b !== '');
+  }
+  return splitQuoteBlocks(text);
+}
+
+// wrapText로 나뉜 각 줄(lines)에 대해, 그 줄이 "인용 표시(큰따옴표 등)를 시작해야 하는 줄"인지
+// 나타내는 boolean 배열을 반환한다. 사용자가 지정한 영역이 있으면 그 영역들의 시작 지점을,
+// 없으면 빈 줄로 구분된 자동 블록의 시작 지점을 사용한다.
+function getQuoteMarkFlags(lines, lineRanges) {
+  if (state.sidebarLineMode && state.sidebarLines.length > 0) {
+    const ranges = state.sidebarLines;
+    return lines.map((_, i) => {
+      const range = lineRanges[i];
+      if (!range) return false;
+      return ranges.some(r => r.start >= range.start && r.start < range.end);
+    });
+  }
+  // 캐릭터 색상 범위가 있으면 각 캐릭터의 시작 줄마다 따옴표 표시
+  if (state.charColorRanges.length > 0) {
+    return lines.map((_, i) => {
+      const range = lineRanges[i];
+      if (!range) return false;
+      return state.charColorRanges.some(r => r.start >= range.start && r.start < range.end);
+    });
+  }
+  // 기본 모드: 전체 텍스트의 맨 첫 줄에만 큰따옴표를 표시한다.
+  const firstContentIdx = lines.findIndex(l => l !== '');
+  return lines.map((_, i) => i === firstContentIdx);
+}
+
+// ─── 메인 렌더 ───
+async function render() {
+  const canvas = document.getElementById('c');
+  const W = state.canvasW;
+  const H = state.canvasH;
+  canvas.width = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext('2d');
+  const dpr = 1; // canvas는 실제 픽셀로
+
+  // ── 배경 ──
+  if (state.bgImage && state.bgType === 'image') {
+    ctx.save();
+    if (state.blur > 0) {
+      ctx.filter = `blur(${state.blur}px)`;
+    }
+    // cover 방식 드로잉
+    const img = state.bgImage;
+    const iAR = img.width / img.height;
+    const cAR = W / H;
+    let sw, sh, sx, sy;
+    if (iAR > cAR) { sh = img.height; sw = sh * cAR; sx = (img.width - sw) / 2; sy = 0; }
+    else { sw = img.width; sh = sw / cAR; sx = 0; sy = (img.height - sh) / 2; }
+    ctx.drawImage(img, sx, sy, sw, sh, -state.blur * 2, -state.blur * 2, W + state.blur * 4, H + state.blur * 4);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = state.bgPreset;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ── 밝기/어둡기 오버레이 ──
+  if (state.darken > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${state.darken / 100})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+  if (state.brighten > 0) {
+    ctx.fillStyle = `rgba(255,255,255,${state.brighten / 100})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ── 그라데이션 ──
+  if (state.gradient !== 'none') {
+    let grad;
+    if (state.gradient === 'bottom') {
+      grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0.4, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.75)');
+    } else if (state.gradient === 'top') {
+      grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, 'rgba(0,0,0,0.75)');
+      grad.addColorStop(0.6, 'rgba(0,0,0,0)');
+    } else if (state.gradient === 'center') {
+      grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, 'rgba(0,0,0,0.4)');
+      grad.addColorStop(0.5, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.4)');
+    } else if (state.gradient === 'vignette') {
+      grad = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.75);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.7)');
+    }
+    if (grad) {
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  // ── 텍스트 영역 계산 (드래그 영역 우선) ──
+  let pX, pY, maxW, regionH;
+  if (state.useDragRegion && state.dragRegion) {
+    const dr = state.dragRegion;
+    pX = Math.round(dr.x * W);
+    pY = Math.round(dr.y * H);
+    maxW = Math.round(dr.w * W);
+    regionH = Math.round(dr.h * H);
+  } else {
+    pX = state.padX;
+    pY = state.padY;
+    maxW = W - pX * 2;
+    regionH = H - pY * 2;
+  }
+
+  const fs = state.fontSize;
+  const lh = fs * state.lineHeight;
+  const ls = state.letterSpacing;
+  const ff = state.fontFamily;
+
+  ctx.font = `${fs}px "${ff}"`;
+
+  // ── 인용구 스타일별 렌더 ──
+  const style = state.quoteStyle;
+  const text = (document.getElementById('quoteText').value || '').normalize('NFC');
+  const ac = state.accentColor;
+
+  let textStartY;
+
+  if (style === 'bubble-left' || style === 'bubble-right') {
+    const bColor1 = style === 'bubble-right' ? state.bubbleColorRight : state.bubbleColor;
+    const tc1 = isLightColor(bColor1) ? '#1a1a2e' : '#ffffff';
+
+    ctx.font = `${fs}px "${ff}"`;
+    // 엔터(빈 줄)로 구분된 블록마다 별도의 말풍선을 쌓아서 렌더
+    const totalH = measureBubbleBlocksHeight(ctx, text, maxW, fs, state.lineHeight, ls);
+    const srcH = state.sourceChar || state.sourceCreator ? fs * 1.5 + 20 : 0;
+    const contentH = totalH + srcH;
+
+    if (state.useDragRegion && state.dragRegion) {
+      textStartY = pY + (regionH - contentH) / 2;
+    } else if (state.vAlign === 'center') textStartY = pY + (H - pY * 2 - contentH) / 2;
+    else if (state.vAlign === 'top') textStartY = pY;
+    else textStartY = H - pY - contentH;
+
+    let cy = textStartY;
+    const side1 = style === 'bubble-right' ? 'right' : 'left';
+    cy += drawBubbleBlocks(ctx, text, pX, cy, maxW, fs, state.lineHeight, ls, bColor1, tc1, side1, ff, state.indent);
+    drawSource(ctx, W, cy + 16, ff, pX);
+
+  } else {
+    // openquote: 큰따옴표를 문단 첫 줄과 "같은 줄"에, 문단과 동일한 왼쪽 시작선에서 표시
+    let quoteInlineW = 0;
+    if (style === 'openquote') {
+      ctx.font = `bold ${fs * 1.3}px Georgia, serif`;
+      quoteInlineW = ctx.measureText('\u201C').width + fs * 0.22;
+      ctx.font = `${fs}px "${ff}"`;
+    }
+    const effTextW = style === 'sidebar' ? maxW - 24 : style === 'openquote' ? maxW - quoteInlineW : maxW;
+    const lines = wrapText(ctx, text, effTextW, ls);
+
+    // ── 각 라인의 원본 텍스트 범위 계산 ──
+    const rawText = text;
+    const lineRanges = [];
+    {
+      const paras = rawText.split('\n');
+      let globalIdx = 0;
+      for (const para of paras) {
+        if (para.trim() === '') { lineRanges.push(null); globalIdx += 1; continue; }
+        let lineStart = globalIdx;
+        ctx.font = `${fs}px "${ff}"`;
+        let line = '';
+        for (let ci = 0; ci < para.length; ci++) {
+          const ch = para[ci];
+          const testLine = line + ch;
+          const w = measureWithSpacing(ctx, testLine, ls);
+          if (w > effTextW && line !== '') {
+            lineRanges.push({ start: lineStart, end: lineStart + line.length });
+            lineStart += line.length;
+            line = ch;
+          } else {
+            line = testLine;
+          }
+        }
+        if (line) lineRanges.push({ start: lineStart, end: lineStart + line.length });
+        globalIdx += para.length + 1;
+      }
+    }
+
+    const quoteMarkFlags = style === 'openquote' ? getQuoteMarkFlags(lines, lineRanges) : null;
+
+    const textH = lines.length * lh;
+    const srcH = state.sourceChar || state.sourceCreator ? fs * 1.5 + 20 : 0;
+    let contentH = textH + srcH;
+
+    if (state.useDragRegion && state.dragRegion) {
+      textStartY = pY + (regionH - contentH) / 2;
+    } else if (state.vAlign === 'center') textStartY = pY + (H - pY * 2 - contentH) / 2;
+    else if (state.vAlign === 'top') textStartY = pY;
+    else textStartY = H - pY - contentH;
+
+    let cy = textStartY;
+
+    ctx.fillStyle = state.fontColor;
+    ctx.font = `${fs}px "${ff}"`;
+    const textX = style === 'sidebar' ? pX + 20 : style === 'openquote' ? pX + quoteInlineW : pX;
+
+    const hasSelection = state.selectionRanges.length > 0;
+    const hasHighlight = state.highlightRanges.length > 0;
+    const hasCharColors = state.charColorRanges.length > 0;
+
+    // openquote + 캐릭터 색상 범위 모드: 줄별로 textX가 달라짐 (따옴표 있는 줄은 들여쓰기)
+    // textX는 루프 안에서 동적으로 계산
+    const baseTextX = style === 'sidebar' ? pX + 20 : style === 'openquote' ? pX + quoteInlineW : pX;
+
+    // 사이드바: 라인별 바 or 전체 바 판단 함수
+    function sidebarBarForLine(lineIdx, range) {
+      if (style !== 'sidebar') return false;
+      if (!state.sidebarLineMode || state.sidebarLines.length === 0) return true; // 전체
+      // 선택 구간 중 하나라도 이 라인과 겹치면 표시
+      if (!range) return false;
+      return state.sidebarLines.some(r => r.start < range.end && r.end > range.start);
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i] === '') continue;
+      const ly = cy + i * lh + fs;
+      const lineTop = cy + i * lh - 2;
+      const lineH2 = lh + 2;
+      const range = lineRanges[i];
+
+      // openquote + 캐릭터 색상 모드: 이 줄에 따옴표가 찍히는지에 따라 textX 결정
+      const thisLineHasQuoteMark = style === 'openquote' && quoteMarkFlags && quoteMarkFlags[i];
+      const textX = (style === 'openquote' && hasCharColors)
+        ? (thisLineHasQuoteMark ? pX + quoteInlineW : pX)
+        : baseTextX;
+
+      // ── 큰따옴표 ──
+      if (thisLineHasQuoteMark) {
+        const qColor = (hasCharColors && range)
+          ? getCharColorAt(range.start, state.fontColor, state.accentColor).accentColor
+          : ac;
+        ctx.save();
+        ctx.fillStyle = qColor;
+        ctx.font = `bold ${fs * 1.3}px Georgia, serif`;
+        ctx.globalAlpha = 0.9;
+        ctx.fillText('\u201C', pX, ly + fs * 0.1);
+        ctx.restore();
+        ctx.font = `${fs}px "${ff}"`;
+      }
+
+      // ── 사이드바 바 (라인별) ──
+      if (sidebarBarForLine(i, range)) {
+        const barColor = (hasCharColors && range)
+          ? getCharColorAt(range.start, state.fontColor, state.accentColor).accentColor
+          : ac;
+        ctx.fillStyle = barColor;
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(pX, lineTop, 3, lineH2);
+        ctx.globalAlpha = 1;
+      }
+
+      // ── 형광펜 (여러 구간, 텍스트 뒤에 먼저) ──
+      if (hasHighlight && range) {
+        for (const hr of state.highlightRanges) {
+          const overlapStart = Math.max(hr.start, range.start);
+          const overlapEnd = Math.min(hr.end, range.end);
+          if (overlapStart < overlapEnd) {
+            const localStart = overlapStart - range.start;
+            const beforeHL = lines[i].slice(0, localStart);
+            const hlText = lines[i].slice(localStart, overlapEnd - range.start);
+            // 형광펜 시작 X
+            let hlX = textX + (state.indent && i === 0 ? fs : 0);
+            for (let ci = 0; ci < beforeHL.length; ci++) {
+              hlX += ctx.measureText(beforeHL[ci]).width + ls;
+            }
+            const hlW = measureWithSpacing(ctx, hlText, ls);
+            const hlPad = fs * 0.12;
+            ctx.save();
+            ctx.globalAlpha = state.highlightAlpha;
+            ctx.fillStyle = state.highlightColor;
+            ctx.fillRect(hlX - 2, lineTop + hlPad, hlW + 4, lineH2 - hlPad * 2);
+            ctx.restore();
+          }
+        }
+      }
+
+      // ── 텍스트 렌더 (캐릭터 색상 범위 반영) ──
+      if (hasCharColors && range) {
+        let cx2 = textX + (state.indent && i === 0 ? fs : 0);
+        const lineText = lines[i];
+        for (let ci = 0; ci < lineText.length; ci++) {
+          const charPos = range.start + ci;
+          const cc = getCharColorAt(charPos, state.fontColor, state.accentColor);
+          ctx.fillStyle = cc.fontColor;
+          ctx.fillText(lineText[ci], cx2, ly);
+          cx2 += ctx.measureText(lineText[ci]).width + ls;
+        }
+      } else {
+        ctx.fillStyle = state.fontColor;
+        drawTextWithSpacing(ctx, lines[i], textX, ly, ls, state.indent, i === 0);
+      }
+
+      // ── 선택 색상 덮어씌우기 (여러 구간) ──
+      if (hasSelection && range) {
+        for (const sr of state.selectionRanges) {
+          const overlapStart = Math.max(sr.start, range.start);
+          const overlapEnd = Math.min(sr.end, range.end);
+          if (overlapStart < overlapEnd) {
+            const localStart = overlapStart - range.start;
+            const selText = lines[i].slice(localStart, overlapEnd - range.start);
+            const beforeSel = lines[i].slice(0, localStart);
+            let selX = textX + (state.indent && i === 0 ? fs : 0);
+            for (let ci = 0; ci < beforeSel.length; ci++) {
+              selX += ctx.measureText(beforeSel[ci]).width + ls;
+            }
+            ctx.fillStyle = state.selectionColor;
+            let cx2 = selX;
+            for (let ci = 0; ci < selText.length; ci++) {
+              ctx.fillText(selText[ci], cx2, ly);
+              cx2 += ctx.measureText(selText[ci]).width + ls;
+            }
+          }
+        }
+      }
+    }
+
+    const afterText = cy + lines.length * lh;
+    drawSource(ctx, W, afterText + 24, ff, pX);
+  }
+
+  // 드래그 영역 표시선 (미리보기에만, 다운로드 시 제외)
+  if (state.useDragRegion && state.dragRegion && ctx === document.getElementById('c').getContext('2d')) {
+    // 점선 테두리로 영역 표시
+    ctx.save();
+    ctx.strokeStyle = 'rgba(160,160,255,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    const dr = state.dragRegion;
+    ctx.strokeRect(Math.round(dr.x * W), Math.round(dr.y * H), Math.round(dr.w * W), Math.round(dr.h * H));
+    ctx.restore();
+  }
+
+  // 캐릭터 색상 초기화 버튼 표시 여부
+  const clearCharBtn = document.getElementById('clearCharColorsBtn');
+  if (clearCharBtn) clearCharBtn.style.display = state.charColorRanges.length > 0 ? '' : 'none';
+  // 캐릭터 카드 상태 동기화 (색상 적용 표시)
+  if (typeof renderCharList === 'function' && !render._syncingCharList) {
+    render._syncingCharList = true;
+    renderCharList();
+    render._syncingCharList = false;
+  }
+
+  // update preview size
+  const wrap = document.getElementById('canvas-wrap');
+  const maxPW = wrap.parentElement.clientWidth - 48;
+  const maxPH = window.innerHeight - 100;
+  const scale = Math.min(1, maxPW / W, maxPH / H);
+  canvas.style.width = (W * scale) + 'px';
+  canvas.style.height = (H * scale) + 'px';
+
+  // drag overlay 크기 동기화
+  const dragOv = document.getElementById('drag-overlay');
+  if (dragOv) {
+    dragOv.style.width = canvas.style.width;
+    dragOv.style.height = canvas.style.height;
+  }
+  syncDragSelBox();
+}
+
+function drawSource(ctx, W, y, ff, padX) {
+  const char = state.sourceChar.trim();
+  const creator = state.sourceCreator.trim();
+  if (!char && !creator) return;
+
+  const sep = state.separator;
+  const sourceText = char && creator ? char + sep + creator : char || creator;
+  const sf = state.sourceSize;
+  ctx.font = `${sf}px "${ff}"`;
+  ctx.fillStyle = state.sourceColor;
+
+  const tw = measureWithSpacing(ctx, sourceText, state.letterSpacing * 0.5);
+  const align = state.sourceAlign || 'center';
+  let sx;
+  if (align === 'left') sx = padX !== undefined ? padX : state.padX;
+  else if (align === 'right') sx = W - tw - (padX !== undefined ? padX : state.padX);
+  else sx = (W - tw) / 2;
+
+  drawTextWithSpacing(ctx, sourceText, sx, y + sf, state.letterSpacing * 0.5, false, false);
+}
+
+function isLightColor(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return (r*299 + g*587 + b*114) / 1000 > 128;
+}
+
+// ─── 다운로드 ───
+async function downloadImage() {
+  const btn = document.querySelector('.btn-download');
+  const originalLabel = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳ 생성 중...'; btn.disabled = true; }
+
+  try {
+    const SCALE = 3;
+    const W = state.canvasW * SCALE;
+    const H = state.canvasH * SCALE;
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = W;
+    offCanvas.height = H;
+    const offCtx = offCanvas.getContext('2d');
+    offCtx.scale(SCALE, SCALE);
+    await renderToCtx(offCtx, state.canvasW, state.canvasH);
+
+    const filename = `quote_${Date.now()}.png`;
+    const blob = await new Promise((resolve, reject) => {
+      offCanvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/png', 1.0);
+    });
+
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = blobUrl;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  } catch (err) {
+    console.error('이미지 저장 실패:', err);
+    alert('이미지 저장에 실패했습니다.');
+  } finally {
+    if (btn) { btn.textContent = originalLabel; btn.disabled = false; }
+  }
+}
+
+async function renderToCtx(ctx, W, H) {
+  // 배경
+  if (state.bgImage && state.bgType === 'image') {
+    ctx.save();
+    if (state.blur > 0) ctx.filter = `blur(${state.blur}px)`;
+    const img = state.bgImage;
+    const iAR = img.width / img.height;
+    const cAR = W / H;
+    let sw, sh, sx, sy;
+    if (iAR > cAR) { sh = img.height; sw = sh * cAR; sx = (img.width - sw) / 2; sy = 0; }
+    else { sw = img.width; sh = sw / cAR; sx = 0; sy = (img.height - sh) / 2; }
+    ctx.drawImage(img, sx, sy, sw, sh, -state.blur * 2, -state.blur * 2, W + state.blur * 4, H + state.blur * 4);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = state.bgPreset;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  if (state.darken > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${state.darken / 100})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+  if (state.brighten > 0) {
+    ctx.fillStyle = `rgba(255,255,255,${state.brighten / 100})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  if (state.gradient !== 'none') {
+    let grad;
+    if (state.gradient === 'bottom') { grad = ctx.createLinearGradient(0,0,0,H); grad.addColorStop(0.4,'rgba(0,0,0,0)'); grad.addColorStop(1,'rgba(0,0,0,0.75)'); }
+    else if (state.gradient === 'top') { grad = ctx.createLinearGradient(0,0,0,H); grad.addColorStop(0,'rgba(0,0,0,0.75)'); grad.addColorStop(0.6,'rgba(0,0,0,0)'); }
+    else if (state.gradient === 'center') { grad = ctx.createLinearGradient(0,0,0,H); grad.addColorStop(0,'rgba(0,0,0,0.4)'); grad.addColorStop(0.5,'rgba(0,0,0,0)'); grad.addColorStop(1,'rgba(0,0,0,0.4)'); }
+    else if (state.gradient === 'vignette') { grad = ctx.createRadialGradient(W/2,H/2,H*0.2,W/2,H/2,H*0.75); grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(1,'rgba(0,0,0,0.7)'); }
+    if (grad) { ctx.fillStyle = grad; ctx.fillRect(0,0,W,H); }
+  }
+
+  let pX, pY, maxW, regionH;
+  if (state.useDragRegion && state.dragRegion) {
+    const dr = state.dragRegion;
+    pX = Math.round(dr.x * W);
+    pY = Math.round(dr.y * H);
+    maxW = Math.round(dr.w * W);
+    regionH = Math.round(dr.h * H);
+  } else {
+    pX = state.padX; pY = state.padY;
+    maxW = W - pX * 2;
+    regionH = H - pY * 2;
+  }
+
+  const fs = state.fontSize; const lh = fs * state.lineHeight;
+  const ls = state.letterSpacing; const ff = state.fontFamily;
+  const style = state.quoteStyle;
+  const ac = state.accentColor;
+  const text = (document.getElementById('quoteText').value || '').normalize('NFC');
+
+  ctx.font = `${fs}px "${ff}"`;
+
+  if (style === 'bubble-left' || style === 'bubble-right') {
+    const bColor1 = style === 'bubble-right' ? state.bubbleColorRight : state.bubbleColor;
+    const tc1 = isLightColor(bColor1) ? '#1a1a2e' : '#ffffff';
+    // 엔터(빈 줄)로 구분된 블록마다 별도의 말풍선을 쌓아서 렌더
+    const totalH = measureBubbleBlocksHeight(ctx, text, maxW, fs, state.lineHeight, ls);
+    const srcH = state.sourceChar || state.sourceCreator ? fs * 1.5 + 20 : 0;
+    const contentH = totalH + srcH;
+    let cy;
+    if (state.useDragRegion && state.dragRegion) cy = pY + (regionH - contentH) / 2;
+    else cy = state.vAlign === 'center' ? pY + (H - pY*2 - contentH)/2 : state.vAlign === 'top' ? pY : H - pY - contentH;
+    const side1 = style === 'bubble-right' ? 'right' : 'left';
+    cy += drawBubbleBlocks(ctx, text, pX, cy, maxW, fs, state.lineHeight, ls, bColor1, tc1, side1, ff, state.indent);
+    drawSource(ctx, W, cy + 16, ff, pX);
+  } else {
+    // openquote: 큰따옴표를 문단 첫 줄과 같은 줄에, 문단과 동일한 왼쪽 시작선에서 표시
+    let quoteInlineW2 = 0;
+    if (style === 'openquote') {
+      ctx.font = `bold ${fs * 1.3}px Georgia, serif`;
+      quoteInlineW2 = ctx.measureText('\u201C').width + fs * 0.22;
+      ctx.font = `${fs}px "${ff}"`;
+    }
+    const effTextW2 = style === 'sidebar' ? maxW - 24 : style === 'openquote' ? maxW - quoteInlineW2 : maxW;
+    const lines = wrapText(ctx, text, effTextW2, ls);
+
+    // ── 라인 범위 계산 ──
+    const lineRanges2 = [];
+    {
+      const paras = text.split('\n');
+      let globalIdx = 0;
+      for (const para of paras) {
+        if (para.trim() === '') { lineRanges2.push(null); globalIdx += 1; continue; }
+        ctx.font = `${fs}px "${ff}"`;
+        let line = ''; let lineStart = globalIdx;
+        for (let ci = 0; ci < para.length; ci++) {
+          const ch = para[ci];
+          const testLine = line + ch;
+          const w = measureWithSpacing(ctx, testLine, ls);
+          if (w > effTextW2 && line !== '') { lineRanges2.push({ start: lineStart, end: lineStart + line.length }); lineStart += line.length; line = ch; }
+          else line = testLine;
+        }
+        if (line) lineRanges2.push({ start: lineStart, end: lineStart + line.length });
+        globalIdx += para.length + 1;
+      }
+    }
+
+    const quoteMarkFlags2 = style === 'openquote' ? getQuoteMarkFlags(lines, lineRanges2) : null;
+
+    const textH = lines.length * lh;
+    const srcH = state.sourceChar || state.sourceCreator ? fs * 1.5 + 20 : 0;
+    let contentH = textH + srcH;
+    let cy;
+    if (state.useDragRegion && state.dragRegion) cy = pY + (regionH - contentH) / 2;
+    else cy = state.vAlign === 'center' ? pY + (H - pY*2 - contentH)/2 : state.vAlign === 'top' ? pY : H - pY - contentH;
+
+    ctx.font = `${fs}px "${ff}"`;
+    const baseTextX2 = style === 'sidebar' ? pX + 20 : style === 'openquote' ? pX + quoteInlineW2 : pX;
+
+    const hasSelection2 = state.selectionRanges.length > 0;
+    const hasHighlight2 = state.highlightRanges.length > 0;
+    const hasCharColors2 = state.charColorRanges.length > 0;
+
+    function sidebarBarForLine2(lineIdx, range) {
+      if (style !== 'sidebar') return false;
+      if (!state.sidebarLineMode || state.sidebarLines.length === 0) return true;
+      if (!range) return false;
+      return state.sidebarLines.some(r => r.start < range.end && r.end > range.start);
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i] === '') continue;
+      const ly = cy + i * lh + fs;
+      const lineTop = cy + i * lh - 2;
+      const lineH2 = lh + 2;
+      const range = lineRanges2[i];
+
+      const thisLineHasQuoteMark2 = style === 'openquote' && quoteMarkFlags2 && quoteMarkFlags2[i];
+      const textX = (style === 'openquote' && hasCharColors2)
+        ? (thisLineHasQuoteMark2 ? pX + quoteInlineW2 : pX)
+        : baseTextX2;
+
+      // 큰따옴표
+      if (thisLineHasQuoteMark2) {
+        const qColor2 = (hasCharColors2 && range)
+          ? getCharColorAt(range.start, state.fontColor, state.accentColor).accentColor
+          : ac;
+        ctx.save();
+        ctx.fillStyle = qColor2;
+        ctx.font = `bold ${fs * 1.3}px Georgia, serif`;
+        ctx.globalAlpha = 0.9;
+        ctx.fillText('\u201C', pX, ly + fs * 0.1);
+        ctx.restore();
+        ctx.font = `${fs}px "${ff}"`;
+      }
+
+      // 사이드바 바 (라인별)
+      if (sidebarBarForLine2(i, range)) {
+        const barColor2 = (hasCharColors2 && range)
+          ? getCharColorAt(range.start, state.fontColor, state.accentColor).accentColor
+          : ac;
+        ctx.fillStyle = barColor2; ctx.globalAlpha = 0.85;
+        ctx.fillRect(pX, lineTop, 3, lineH2); ctx.globalAlpha = 1;
+      }
+
+      // 형광펜 (여러 구간)
+      if (hasHighlight2 && range) {
+        for (const hr of state.highlightRanges) {
+          const overlapStart = Math.max(hr.start, range.start);
+          const overlapEnd = Math.min(hr.end, range.end);
+          if (overlapStart < overlapEnd) {
+            const localStart = overlapStart - range.start;
+            const beforeHL = lines[i].slice(0, localStart);
+            const hlText = lines[i].slice(localStart, overlapEnd - range.start);
+            let hlX = textX + (state.indent && i === 0 ? fs : 0);
+            for (let ci = 0; ci < beforeHL.length; ci++) hlX += ctx.measureText(beforeHL[ci]).width + ls;
+            const hlW = measureWithSpacing(ctx, hlText, ls);
+            const hlPad = fs * 0.12;
+            ctx.save();
+            ctx.globalAlpha = state.highlightAlpha;
+            ctx.fillStyle = state.highlightColor;
+            ctx.fillRect(hlX - 2, lineTop + hlPad, hlW + 4, lineH2 - hlPad * 2);
+            ctx.restore();
+          }
+        }
+      }
+
+      // 텍스트 (캐릭터 색상 범위 반영)
+      if (hasCharColors2 && range) {
+        let cx2 = textX + (state.indent && i === 0 ? fs : 0);
+        const lineText = lines[i];
+        for (let ci = 0; ci < lineText.length; ci++) {
+          const charPos = range.start + ci;
+          const cc = getCharColorAt(charPos, state.fontColor, state.accentColor);
+          ctx.fillStyle = cc.fontColor;
+          ctx.fillText(lineText[ci], cx2, ly);
+          cx2 += ctx.measureText(lineText[ci]).width + ls;
+        }
+      } else {
+        ctx.fillStyle = state.fontColor;
+        drawTextWithSpacing(ctx, lines[i], textX, ly, ls, state.indent, i === 0);
+      }
+
+      // 선택 색상 (여러 구간)
+      if (hasSelection2 && range) {
+        for (const sr of state.selectionRanges) {
+          const overlapStart = Math.max(sr.start, range.start);
+          const overlapEnd = Math.min(sr.end, range.end);
+          if (overlapStart < overlapEnd) {
+            const localStart = overlapStart - range.start;
+            const selText = lines[i].slice(localStart, overlapEnd - range.start);
+            const beforeSel = lines[i].slice(0, localStart);
+            let selX = textX + (state.indent && i === 0 ? fs : 0);
+            for (let ci = 0; ci < beforeSel.length; ci++) selX += ctx.measureText(beforeSel[ci]).width + ls;
+            ctx.fillStyle = state.selectionColor;
+            let cx2 = selX;
+            for (let ci = 0; ci < selText.length; ci++) {
+              ctx.fillText(selText[ci], cx2, ly);
+              cx2 += ctx.measureText(selText[ci]).width + ls;
+            }
+          }
+        }
+      }
+    }
+    drawSource(ctx, W, cy + lines.length * lh + 24, ff, pX);
+  }
+}
+
+// ═══════════════════════════════════════
+// ─── 캐릭터 관리 ───
+// ═══════════════════════════════════════
+const CHAR_STORAGE_KEY = 'quoteGenChars_v1';
+let charNewStyle = 'openquote';
+
+function loadChars() {
+  try { const r = localStorage.getItem(CHAR_STORAGE_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
+}
+function saveChars(chars) {
+  try { localStorage.setItem(CHAR_STORAGE_KEY, JSON.stringify(chars)); } catch {}
+}
+
+function selectCharStyle(el, style) {
+  document.querySelectorAll('#charStyleChips .chip').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  charNewStyle = style;
+}
+
+function addCharacter() {
+  const nameEl = document.getElementById('charNameInput');
+  const name = nameEl.value.trim();
+  if (!name) { alert('캐릭터 이름을 입력해주세요.'); nameEl.focus(); return; }
+  const fontColor  = document.getElementById('charFontColorInput').value;
+  const accentColor = document.getElementById('charAccentColorInput').value;
+  const chars = loadChars();
+  if (chars.find(c => c.name === name)) { alert('같은 이름의 캐릭터가 이미 있어요.'); return; }
+  chars.push({ name, fontColor, accentColor, style: charNewStyle });
+  saveChars(chars);
+  nameEl.value = '';
+  renderCharList();
+}
+
+function deleteCharacter(idx) {
+  const chars = loadChars();
+  const ch = chars[idx];
+  if (state.activeCharIdx === idx) { state.activeCharIdx = -1; }
+  else if (state.activeCharIdx > idx) { state.activeCharIdx--; }
+  // 해당 캐릭터 이름으로 등록된 색상 범위 제거
+  if (ch) {
+    state.charColorRanges = state.charColorRanges.filter(r => r.charName !== ch.name);
+  }
+  chars.splice(idx, 1);
+  saveChars(chars);
+  renderCharList();
+  render();
+}
+
+function toggleCharAdd() {
+  const form = document.getElementById('charAddForm');
+  const btn = document.getElementById('charAddToggleBtn');
+  const open = form.style.display === 'none';
+  form.style.display = open ? '' : 'none';
+  btn.textContent = open ? '✕ 닫기' : '＋ 추가';
+}
+
+function applyCharacter(idx) {
+  const chars = loadChars();
+  const ch = chars[idx];
+  if (!ch) return;
+
+  // 토글: 같은 캐릭터 클릭 시 선택 해제
+  if (state.activeCharIdx === idx) {
+    state.activeCharIdx = -1;
+    renderCharList();
+    return;
+  }
+  state.activeCharIdx = idx;
+
+  // ── 인용 스타일만 변경 (색상은 개별 삽입으로 적용) ──
+  const styleEl = document.querySelector(`.qchip[data-style="${ch.style}"]`);
+  if (styleEl) setQuoteStyle(styleEl, ch.style);
+
+  renderCharList();
+  render();
+}
+
+function insertCharIntoText(idx) {
+  const chars = loadChars();
+  const ch = chars[idx];
+  if (!ch) return;
+
+  // ── 캐릭터에 저장된 인용 스타일 적용 ──
+  const styleEl = document.querySelector(`.qchip[data-style="${ch.style}"]`);
+  if (styleEl) setQuoteStyle(styleEl, ch.style);
+  state.activeCharIdx = idx;
+
+  const ta = document.getElementById('quoteText');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const before = ta.value.slice(0, start);
+  const after = ta.value.slice(end);
+
+  // 줄 시작이면 바로, 아니면 앞에 줄바꿈 추가
+  const needsNewline = before.length > 0 && !before.endsWith('\n');
+  const prefix = (needsNewline ? '\n' : '');
+  const insert = prefix + ch.name + ' ';
+
+  ta.value = before + insert + after;
+  state.quoteText = ta.value;
+  // 프로그래밍 방식 삽입이므로 _prevQuoteText 동기화 (다음 input 이벤트의 delta 계산용)
+  if (typeof _prevQuoteText !== 'undefined') _prevQuoteText = ta.value;
+
+  // 커서를 삽입된 텍스트 뒤로 이동
+  const newPos = start + insert.length;
+  ta.setSelectionRange(newPos, newPos);
+  ta.focus();
+
+  // ── 캐릭터 색상 범위 등록 ──
+  // 기존 범위들을 삽입 위치 기준으로 시프트
+  const insertOffset = insert.length;
+  const insertAt = start; // 실제 삽입 시작 위치
+  state.charColorRanges = state.charColorRanges.map(r => {
+    if (r.start >= insertAt) return { ...r, start: r.start + insertOffset };
+    return r;
+  });
+
+  // 새 범위 추가: start만 저장, end는 렌더 시 동적으로 계산
+  // (이름 뒤에 대사를 타이핑해도 end가 밀리도록 하기 위해 고정값 저장 안 함)
+  const charRangeStart = insertAt + prefix.length; // \n 제외, 이름 시작부터
+
+  state.charColorRanges.push({
+    start: charRangeStart,
+    charName: ch.name,
+    fontColor: ch.fontColor || ch.color || '#e8e8f0',
+    accentColor: ch.accentColor || ch.color || '#8080c0',
+  });
+
+  // 선택 범위 초기화
+  state.selectionRanges = [];
+  state.highlightRanges = [];
+  state.sidebarLines = [];
+  state.sidebarLineMode = false;
+  document.getElementById('selectionColorRow').style.display = 'none';
+  document.getElementById('highlightColorRow').style.display = 'none';
+  updateSelectionPreview();
+  updateSidebarLinePreview();
+  render();
+}
+
+// 캐릭터 색상 범위에서 특정 텍스트 위치(pos)에 해당하는 캐릭터 색상을 반환
+// charColorRanges는 "start 위치부터 다음 캐릭터 start 전까지" 구간으로 해석
+// 지문(어떤 캐릭터 범위에도 속하지 않는 구간)은 기본 색상을 반환한다.
+function getCharColorAt(pos, defaultFontColor, defaultAccentColor) {
+  const ranges = state.charColorRanges;
+  if (!ranges || ranges.length === 0) return { fontColor: defaultFontColor, accentColor: defaultAccentColor };
+
+  // start 기준 오름차순 정렬
+  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+
+  // pos >= r.start 이고 가장 큰 start를 가진 range 찾기
+  let best = null;
+  let bestIdx = -1;
+  for (let i = 0; i < sorted.length; i++) {
+    const r = sorted[i];
+    if (pos >= r.start) {
+      if (!best || r.start > best.start) { best = r; bestIdx = i; }
+    }
+  }
+  if (!best) return { fontColor: defaultFontColor, accentColor: defaultAccentColor };
+
+  // 이 캐릭터가 유효한 끝 위치를 계산:
+  // 현재 텍스트에서 best.start 이후 첫 \n (= 이 줄의 끝)
+  const fullText = (document.getElementById('quoteText').value || '').normalize('NFC');
+  const nlIdx = fullText.indexOf('\n', best.start);
+  const effectiveEnd = nlIdx >= 0 ? nlIdx : fullText.length;
+
+  // pos가 이 줄 끝을 넘으면 지문 → 기본 색
+  if (pos >= effectiveEnd) {
+    return { fontColor: defaultFontColor, accentColor: defaultAccentColor };
+  }
+
+  return { fontColor: best.fontColor, accentColor: best.accentColor };
+}
+
+// quoteText 변경 시 charColorRanges도 초기화
+function resetCharColorRanges() {
+  state.charColorRanges = [];
+}
+
+function renderCharList() {
+  const listEl = document.getElementById('charList');
+  const emptyEl = document.getElementById('charEmpty');
+  const chars = loadChars();
+
+  // 기존 카드 제거
+  listEl.querySelectorAll('.char-card').forEach(el => el.remove());
+
+  if (chars.length === 0) {
+    if (emptyEl) emptyEl.style.display = '';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  const styleLabel = { none: '없음', sidebar: '사이드바', openquote: '큰따옴표', 'bubble-left': '말풍선(좌)', 'bubble-right': '말풍선(우)' };
+
+  chars.forEach((ch, i) => {
+    const fc = ch.fontColor || ch.color || '#e8e8f0';
+    const ac = ch.accentColor || ch.color || '#8080c0';
+    const card = document.createElement('div');
+    card.className = 'char-card' + (state.activeCharIdx === i ? ' active' : '');
+    const hasRange = state.charColorRanges.some(r => r.charName === ch.name);
+    card.innerHTML = `
+      <div style="display:flex;gap:3px;flex-shrink:0;">
+        <div class="char-dot" title="폰트색" style="background:${fc};"></div>
+        <div class="char-dot" title="인용구색" style="background:${ac};"></div>
+      </div>
+      <div class="char-info">
+        <div class="char-name">${ch.name}${hasRange ? ' <span style="font-size:9px;color:#a0c4ff;vertical-align:middle;" title="본문에 색상 적용됨">●</span>' : ''}</div>
+        <div class="char-meta">${styleLabel[ch.style] || ch.style}${hasRange ? ' · 색상 적용중' : ''}</div>
+      </div>
+      <button class="mini-btn" onclick="event.stopPropagation();insertCharIntoText(${i})" title="본문에 이름 삽입" style="flex-shrink:0;">↵ 삽입</button>
+      <button class="char-del" onclick="event.stopPropagation();deleteCharacter(${i})" title="삭제">✕</button>
+    `;
+    card.addEventListener('click', () => applyCharacter(i));
+    listEl.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════
+// ─── 프리셋 저장 ───
+// ═══════════════════════════════════════
+const PRESET_STORAGE_KEY = 'quoteGenPresets_v2';
+const MAX_PRESETS = 8;
+
+function loadPresets() {
+  try { const r = localStorage.getItem(PRESET_STORAGE_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
+}
+function savePresetsList(presets) {
+  try { localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets)); } catch {}
+}
+
+function getStateSnapshot() {
+  return {
+    fontFamily: state.fontFamily,
+    fontSize: state.fontSize,
+    fontColor: state.fontColor,
+    letterSpacing: state.letterSpacing,
+    lineHeight: state.lineHeight,
+    indent: state.indent,
+    quoteStyle: state.quoteStyle,
+    accentColor: state.accentColor,
+    bgType: state.bgType,
+    bgPreset: state.bgPreset,
+    blur: state.blur,
+    darken: state.darken,
+    brighten: state.brighten,
+    gradient: state.gradient,
+    sourceChar: state.sourceChar,
+    sourceCreator: state.sourceCreator,
+    separator: state.separator,
+    sourceColor: state.sourceColor,
+    sourceSize: state.sourceSize,
+    sourceAlign: state.sourceAlign,
+    selectionColor: state.selectionColor,
+    highlightColor: state.highlightColor,
+    highlightAlpha: state.highlightAlpha,
+    canvasW: state.canvasW,
+    canvasH: state.canvasH,
+    padX: state.padX,
+    padY: state.padY,
+    vAlign: state.vAlign,
+  };
+}
+
+function applyStateSnapshot(snap) {
+  // state 값 복원
+  const keys = Object.keys(snap);
+  keys.forEach(k => { if (k in state) state[k] = snap[k]; });
+
+  // ── UI 동기화 ──
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const setChk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v; };
+
+  // 폰트
+  setVal('fontFamily', snap.fontFamily);
+  setVal('fontColor', snap.fontColor);
+  setVal('fontColorHex', snap.fontColor.toUpperCase());
+  setVal('fontSize', snap.fontSize); setTxt('fontSizeVal', snap.fontSize);
+  setVal('letterSpacing', snap.letterSpacing); setTxt('letterSpacingVal', snap.letterSpacing);
+  setVal('lineHeight', snap.lineHeight); setTxt('lineHeightVal', snap.lineHeight);
+  setChk('indent', snap.indent);
+
+  // 인용 스타일 칩
+  document.querySelectorAll('.qchip').forEach(el => {
+    el.classList.toggle('active', el.dataset.style === snap.quoteStyle);
+  });
+  updateAccentVisibility(snap.quoteStyle);
+  const sidebarField = document.getElementById('sidebarLineField');
+  if (sidebarField) sidebarField.style.display = snap.quoteStyle === 'none' ? 'none' : '';
+
+  // accent 색상
+  setVal('accentColor', snap.accentColor);
+  setVal('accentColorHex', snap.accentColor.toUpperCase());
+
+  // 배경
+  if (snap.bgType === 'preset') {
+    state.bgImage = null;
+    document.querySelectorAll('.bg-thumb').forEach(el => {
+      // bg-thumb의 background inline style과 비교
+      const c = el.style.backgroundColor || el.style.background;
+      // hex 비교를 위해 임시 canvas color 파싱
+      el.classList.toggle('active', false);
+    });
+    // 색상이 일치하는 thumb 활성화
+    document.querySelectorAll('.bg-thumb').forEach(el => {
+      const tmp = document.createElement('canvas').getContext('2d');
+      tmp.fillStyle = el.style.background || el.style.backgroundColor;
+      // 직접 hex 비교
+      if ((el.style.background || '').toLowerCase() === snap.bgPreset.toLowerCase()) {
+        el.classList.add('active');
+      }
+    });
+  }
+  setVal('blur', snap.blur); setTxt('blurVal', snap.blur);
+  setVal('darken', snap.darken); setTxt('darkenVal', snap.darken);
+  setVal('brighten', snap.brighten); setTxt('brightenVal', snap.brighten);
+
+  // 그라데이션 칩
+  document.querySelectorAll('#gradChips .chip').forEach(el => {
+    const fn = el.getAttribute('onclick') || '';
+    el.classList.toggle('active', fn.includes(`'${snap.gradient}'`));
+  });
+
+  // 출처
+  setVal('sourceChar', snap.sourceChar);
+  setVal('sourceCreator', snap.sourceCreator);
+  setVal('sourceColor', snap.sourceColor);
+  setVal('sourceColorHex', snap.sourceColor.toUpperCase());
+  setVal('sourceSize', snap.sourceSize); setTxt('sourceSizeVal', snap.sourceSize);
+
+  // 출처 정렬 칩
+  document.querySelectorAll('#sourceAlignChips .chip').forEach(el => {
+    const fn = el.getAttribute('onclick') || '';
+    el.classList.toggle('active', fn.includes(`'${snap.sourceAlign}'`));
+  });
+
+  // 텍스트 세로 정렬 칩
+  document.querySelectorAll('#alignChips .chip').forEach(el => {
+    const fn = el.getAttribute('onclick') || '';
+    el.classList.toggle('active', fn.includes(`'${snap.vAlign}'`));
+  });
+
+  // 선택/형광펜 색상
+  setVal('selectionFontColor', snap.selectionColor);
+  setVal('selectionFontColorHex', snap.selectionColor.toUpperCase());
+  setVal('highlightColor', snap.highlightColor);
+  setVal('highlightColorHex', snap.highlightColor.toUpperCase());
+  const alphaInt = Math.round(snap.highlightAlpha * 100);
+  setVal('highlightAlpha', alphaInt); setTxt('highlightAlphaVal', alphaInt);
+
+  // 캔버스 & 여백
+  setVal('canvasW', snap.canvasW); setVal('canvasH', snap.canvasH);
+  setVal('padX', snap.padX); setTxt('padXVal', snap.padX);
+  setVal('padY', snap.padY); setTxt('padYVal', snap.padY);
+
+  render();
+}
+
+function savePreset() {
+  const presets = loadPresets();
+  if (presets.length >= MAX_PRESETS) {
+    alert(`프리셋은 최대 ${MAX_PRESETS}개까지 저장할 수 있어요.\n기존 프리셋을 먼저 삭제해주세요.`);
+    return;
+  }
+  const nameEl = document.getElementById('presetNameInput');
+  const name = (nameEl ? nameEl.value.trim() : '') || `프리셋 ${presets.length + 1}`;
+  presets.push({ name, snap: getStateSnapshot(), savedAt: Date.now() });
+  savePresetsList(presets);
+  if (nameEl) nameEl.value = '';
+  renderPresetList();
+}
+
+function deletePreset(idx) {
+  const presets = loadPresets();
+  presets.splice(idx, 1);
+  savePresetsList(presets);
+  renderPresetList();
+}
+
+function applyPreset(idx) {
+  const presets = loadPresets();
+  if (presets[idx]) applyStateSnapshot(presets[idx].snap);
+}
+
+function renderPresetList() {
+  const listEl = document.getElementById('savedPresetList');
+  const countEl = document.getElementById('presetCount');
+  const presets = loadPresets();
+  if (countEl) countEl.textContent = `(${presets.length}/${MAX_PRESETS})`;
+  if (!listEl) return;
+
+  if (presets.length === 0) {
+    listEl.innerHTML = '<div class="preset-empty">저장된 프리셋이 없습니다</div>';
+    return;
+  }
+
+  const styleName = { none: '없음', sidebar: '사이드바', openquote: '큰따옴표', 'bubble-left': '말풍선(좌)', 'bubble-right': '말풍선(우)' };
+  listEl.innerHTML = presets.map((p, i) => {
+    const bg = p.snap.bgPreset || '#2e3340';
+    const d = new Date(p.savedAt);
+    const ds = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const sl = styleName[p.snap.quoteStyle] || p.snap.quoteStyle;
+    const ff = p.snap.fontFamily.includes('Serif') ? '명조' : p.snap.fontFamily === 'Georgia' ? 'Georgia' : '고딕';
+    return `
+      <div class="preset-item" onclick="applyPreset(${i})" title="클릭해서 불러오기">
+        <div class="preset-swatch" style="background:${bg};"></div>
+        <div class="preset-info">
+          <div class="preset-name">${p.name}</div>
+          <div class="preset-meta">${sl} · ${ff} · ${ds}</div>
+        </div>
+        <button class="preset-del" onclick="event.stopPropagation();deletePreset(${i})" title="삭제">✕</button>
+      </div>`;
+  }).join('');
+}
+
+// ─── 인용 스타일 변경 시 accent 색상 필드 표시 업데이트 ───
+function updateAccentVisibility(style) {
+  const field = document.getElementById('accentColorField');
+  const label = document.getElementById('accentColorLabel');
+  if (style === 'sidebar') {
+    field.style.display = '';
+    label.textContent = '사이드바 바 색상';
+  } else if (style === 'openquote') {
+    field.style.display = '';
+    label.textContent = '큰따옴표 색상';
+  } else {
+    field.style.display = 'none';
+  }
+}
+
+// ─── 드래그 영역 로직 ───
+let dragState = { dragging: false, startX: 0, startY: 0, curX: 0, curY: 0 };
+
+function getCanvasScale() {
+  const canvas = document.getElementById('c');
+  const displayW = canvas.offsetWidth;
+  return displayW / state.canvasW;
+}
+
+function syncDragSelBox() {
+  const sel = document.getElementById('drag-sel');
+  if (!sel) return;
+  if (!state.useDragRegion || !state.dragRegion) {
+    sel.classList.remove('visible');
+    return;
+  }
+  const scale = getCanvasScale();
+  const dr = state.dragRegion;
+  sel.style.left   = (dr.x * state.canvasW * scale) + 'px';
+  sel.style.top    = (dr.y * state.canvasH * scale) + 'px';
+  sel.style.width  = (dr.w * state.canvasW * scale) + 'px';
+  sel.style.height = (dr.h * state.canvasH * scale) + 'px';
+  sel.classList.add('visible');
+}
+
+function initDragOverlay() {
+  const overlay = document.getElementById('drag-overlay');
+  const sel     = document.getElementById('drag-sel');
+
+  function pointerPos(e) {
+    const rect = overlay.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    return { x: cx, y: cy };
+  }
+
+  function startDrag(e) {
+    if (!state.useDragRegion) return;
+    e.preventDefault();
+    const pos = pointerPos(e);
+    dragState = { dragging: true, startX: pos.x, startY: pos.y, curX: pos.x, curY: pos.y };
+    updateDragSel();
+  }
+
+  function moveDrag(e) {
+    if (!dragState.dragging) return;
+    e.preventDefault();
+    const pos = pointerPos(e);
+    dragState.curX = pos.x;
+    dragState.curY = pos.y;
+    updateDragSel();
+  }
+
+  function endDrag(e) {
+    if (!dragState.dragging) return;
+    dragState.dragging = false;
+    commitDragRegion();
+  }
+
+  function updateDragSel() {
+    const scale = getCanvasScale();
+    const x = Math.min(dragState.startX, dragState.curX);
+    const y = Math.min(dragState.startY, dragState.curY);
+    const w = Math.abs(dragState.curX - dragState.startX);
+    const h = Math.abs(dragState.curY - dragState.startY);
+    sel.style.left   = x + 'px';
+    sel.style.top    = y + 'px';
+    sel.style.width  = w + 'px';
+    sel.style.height = h + 'px';
+    sel.classList.add('visible');
+  }
+
+  function commitDragRegion() {
+    const scale = getCanvasScale();
+    const W = state.canvasW, H = state.canvasH;
+    const x = Math.min(dragState.startX, dragState.curX) / scale;
+    const y = Math.min(dragState.startY, dragState.curY) / scale;
+    const w = Math.abs(dragState.curX - dragState.startX) / scale;
+    const h = Math.abs(dragState.curY - dragState.startY) / scale;
+    if (w < 20 || h < 20) return; // 너무 작은 영역 무시
+    state.dragRegion = {
+      x: x / W, y: y / H,
+      w: w / W, h: h / H
+    };
+    document.getElementById('clearDragBtn').style.display = '';
+    render();
+  }
+
+  overlay.addEventListener('mousedown', startDrag);
+  overlay.addEventListener('mousemove', moveDrag);
+  overlay.addEventListener('mouseup', endDrag);
+  overlay.addEventListener('touchstart', startDrag, { passive: false });
+  overlay.addEventListener('touchmove', moveDrag, { passive: false });
+  overlay.addEventListener('touchend', endDrag);
+}
+
+function clearDragRegion() {
+  state.dragRegion = null;
+  const sel = document.getElementById('drag-sel');
+  sel.classList.remove('visible');
+  document.getElementById('clearDragBtn').style.display = 'none';
+  render();
+}
+
+// ─── 이미지 업로드 ───
+document.getElementById('bgImageInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type || !file.type.startsWith('image/')) {
+    alert('이미지 파일만 선택할 수 있습니다.');
+    e.target.value = '';
+    return;
+  }
+  // blob: object URL은 일부 미리보기/샌드박스 환경에서 로드가 막히는 경우가 있어
+  // 호환성이 더 좋은 FileReader(dataURL) 방식을 사용
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      state.bgImage = img;
+      state.bgType = 'image';
+      document.querySelectorAll('.bg-thumb').forEach(x => x.classList.remove('active'));
+      render();
+    };
+    img.onerror = () => {
+      alert('이미지를 불러오지 못했습니다. 다른 이미지 파일로 다시 시도해주세요.');
+    };
+    img.src = reader.result;
+  };
+  reader.onerror = () => {
+    alert('이미지 파일을 읽지 못했습니다. 다른 이미지 파일로 다시 시도해주세요.');
+  };
+  reader.readAsDataURL(file);
+  // 같은 파일을 다시 선택해도 change 이벤트가 발생하도록 초기화
+  e.target.value = '';
+});
+
+// ─── 모바일 사이드바 토글 ───
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// 사이드바 외부 클릭 시 닫기 (모바일)
+document.getElementById('main').addEventListener('click', () => {
+  if (window.innerWidth <= 700) {
+    document.getElementById('sidebar').classList.remove('open');
+  }
+});
+
+// ─── 초기화 ───
+window.addEventListener('load', () => {
+  initBgPresets();
+
+  bindSelect('fontFamily', 'fontFamily');
+  bindColor('fontColor', 'fontColorHex', 'fontColor');
+  bindSlider('fontSize', 'fontSize', 'fontSizeVal');
+  bindSlider('letterSpacing', 'letterSpacing', 'letterSpacingVal');
+  bindSlider('lineHeight', 'lineHeight', 'lineHeightVal');
+  document.getElementById('indent').addEventListener('change', e => {
+    state.indent = e.target.checked; render();
+  });
+
+  // 자모가 분리된 상태(NFD)로 입력/붙여넣기된 경우 조합형(NFC)으로 정규화
+  // (일부 모바일 키보드/붙여넣기 소스에서 자모가 풀려서 들어와 글자가 깨져 보이는 문제 방지)
+  function normalizeQuoteTextarea(ta) {
+    const normalized = ta.value.normalize('NFC');
+    if (normalized !== ta.value) {
+      const pos = ta.selectionStart;
+      const diff = ta.value.length - normalized.length;
+      ta.value = normalized;
+      try { ta.selectionStart = ta.selectionEnd = Math.max(0, pos - diff); } catch (_) {}
+    }
+  }
+
+  // quoteText 변경 시 selection/highlight/sidebar 범위 초기화, charColorRanges는 시프트 유지
+  _prevQuoteText = document.getElementById('quoteText').value;
+  document.getElementById('quoteText').addEventListener('input', e => {
+    const ta = e.target;
+    if (!e.isComposing) normalizeQuoteTextarea(ta);
+    const newText = ta.value;
+    const oldText = _prevQuoteText;
+
+    // ── charColorRanges: 삽입/삭제 위치 감지해서 시프트 ──
+    if (state.charColorRanges.length > 0) {
+      // 커서 위치 기준으로 변경 위치(changeAt)와 길이 차이(delta) 계산
+      const cursor = ta.selectionStart; // 변경 후 커서
+      const delta = newText.length - oldText.length; // +이면 삽입, -이면 삭제
+      // 변경이 일어난 지점: 삽입이면 cursor-delta, 삭제이면 cursor
+      const changeAt = delta >= 0 ? cursor - delta : cursor;
+
+      state.charColorRanges = state.charColorRanges
+        .map(r => {
+          // 변경 지점보다 완전히 앞에 있는 범위: 그대로
+          if (r.start < changeAt) return r;
+          // 변경 지점 이후: start 시프트 (end는 동적 계산이므로 저장 안 함)
+          return { ...r, start: Math.max(changeAt, r.start + delta) };
+        })
+        .filter(r => r.start >= 0); // 음수가 된 범위 제거
+    }
+
+    _prevQuoteText = newText;
+    state.quoteText = newText;
+    state.selectionRanges = [];
+    state.highlightRanges = [];
+    state.sidebarLines = [];
+    state.sidebarLineMode = false;
+    document.getElementById('selectionColorRow').style.display = 'none';
+    document.getElementById('highlightColorRow').style.display = 'none';
+    updateSelectionPreview();
+    updateSidebarLinePreview();
+    render();
+});
+  document.getElementById('quoteText').addEventListener('compositionend', e => {
+    normalizeQuoteTextarea(e.target);
+    state.quoteText = e.target.value;
+    render();
+  });
+  bindColor('accentColor', 'accentColorHex', 'accentColor');
+
+  // 선택 텍스트 색상 바인딩
+  const selColorPicker = document.getElementById('selectionFontColor');
+  const selColorHex = document.getElementById('selectionFontColorHex');
+  selColorPicker.addEventListener('input', () => {
+    state.selectionColor = selColorPicker.value;
+    selColorHex.value = selColorPicker.value.toUpperCase();
+    render();
+  });
+  selColorHex.addEventListener('input', () => {
+    const v = selColorHex.value.trim();
+    if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
+      selColorPicker.value = v;
+      state.selectionColor = v;
+      render();
+    }
+  });
+
+  // 형광펜 색상 바인딩
+  const hlPicker = document.getElementById('highlightColor');
+  const hlHex = document.getElementById('highlightColorHex');
+  hlPicker.addEventListener('input', () => {
+    state.highlightColor = hlPicker.value;
+    hlHex.value = hlPicker.value.toUpperCase();
+    render();
+  });
+  hlHex.addEventListener('input', () => {
+    const v = hlHex.value.trim();
+    if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
+      hlPicker.value = v;
+      state.highlightColor = v;
+      render();
+    }
+  });
+  document.getElementById('highlightAlpha').addEventListener('input', e => {
+    state.highlightAlpha = parseInt(e.target.value) / 100;
+    document.getElementById('highlightAlphaVal').textContent = e.target.value;
+    render();
+  });
+
+  // 드래그 영역 토글
+  document.getElementById('useDragRegion').addEventListener('change', e => {
+    state.useDragRegion = e.target.checked;
+    const overlay = document.getElementById('drag-overlay');
+    const hint = document.getElementById('dragHint');
+    const modeHint = document.getElementById('dragModeHint');
+    if (state.useDragRegion) {
+      overlay.classList.add('active');
+      hint.style.display = '';
+      modeHint.style.display = '';
+    } else {
+      overlay.classList.remove('active');
+      hint.style.display = 'none';
+      modeHint.style.display = 'none';
+      // 영역 초기화
+      state.dragRegion = null;
+      document.getElementById('drag-sel').classList.remove('visible');
+      document.getElementById('clearDragBtn').style.display = 'none';
+    }
+    render();
+  });
+
+  updateAccentVisibility('none');
+  initDragOverlay();
+
+  bindSlider('blur', 'blur', 'blurVal');
+  bindSlider('darken', 'darken', 'darkenVal');
+  bindSlider('brighten', 'brighten', 'brightenVal');
+
+  bindText('sourceChar', 'sourceChar');
+  bindText('sourceCreator', 'sourceCreator');
+  bindColor('sourceColor', 'sourceColorHex', 'sourceColor');
+  bindSlider('sourceSize', 'sourceSize', 'sourceSizeVal');
+
+  bindNumber('canvasW', 'canvasW');
+  bindNumber('canvasH', 'canvasH');
+  document.getElementById('canvasW').addEventListener('change', render);
+  document.getElementById('canvasH').addEventListener('change', render);
+
+  bindSlider('padX', 'padX', 'padXVal');
+  bindSlider('padY', 'padY', 'padYVal');
+
+  // 초기 텍스트 값 설정
+  state.quoteText = document.getElementById('quoteText').value;
+  state.sourceChar = document.getElementById('sourceChar').value;
+  state.sourceCreator = document.getElementById('sourceCreator').value;
+
+  // 캐릭터 폼 색상 hex 동기화
+  ['charFontColor', 'charAccentColor'].forEach(base => {
+    const picker = document.getElementById(base + 'Input');
+    const hex    = document.getElementById(base + 'Hex');
+    if (!picker || !hex) return;
+    picker.addEventListener('input', () => { hex.value = picker.value.toUpperCase(); });
+    hex.addEventListener('input', () => {
+      const v = hex.value.trim();
+      if (/^#[0-9A-Fa-f]{6}$/.test(v)) picker.value = v;
+    });
+  });
+
+  renderCharList();
+  renderPresetList();
+  render();
+  window.addEventListener('resize', render);
+});
+</script>
+</body>
+</html>
